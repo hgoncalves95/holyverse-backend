@@ -9,7 +9,7 @@ CORS(app)
 with open("versiculos.json", "r", encoding="utf-8") as f:
     versiculos = json.load(f)
 
-# 🔥 IA SIMPLES (detecção de sentimento)
+# 🔥 IA SIMPLES
 def detectar_sentimento(texto):
     texto = texto.lower()
 
@@ -26,7 +26,12 @@ def detectar_sentimento(texto):
     else:
         return "alegria"
 
-# 🔹 rota antiga (botões)
+# 🏠 rota raiz (IMPORTANTE)
+@app.route("/")
+def home():
+    return "Backend HolyVerse rodando 🚀"
+
+# 🔹 rota dos botões
 @app.route("/versiculo/<sentimento>")
 def get_versiculo(sentimento):
     sentimento = sentimento.lower()
@@ -37,7 +42,7 @@ def get_versiculo(sentimento):
     verso = random.choice(versiculos[sentimento])
     return jsonify({"versiculo": verso})
 
-# 🔥 rota IA (novo)
+# 🔥 rota IA
 @app.route("/analisar", methods=["POST"])
 def analisar():
     dados = request.json
