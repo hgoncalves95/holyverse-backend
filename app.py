@@ -10,24 +10,32 @@ CORS(app)
 with open("versiculos.json", "r", encoding="utf-8") as f:
     versiculos = json.load(f)
 
-# 🔥 detectar sentimento
 def detectar_sentimento(texto):
     texto = texto.lower()
 
-    if any(p in texto for p in ["cansado", "exausto", "sem energia"]):
-        return "cansaco"
-    elif any(p in texto for p in ["triste", "desanimado", "deprimido"]):
-        return "tristeza"
-    elif any(p in texto for p in ["ansioso", "preocupado", "nervoso"]):
-        return "ansiedade"
-    elif any(p in texto for p in ["medo", "inseguro"]):
-        return "medo"
-    elif any(p in texto for p in ["grato", "agradecido"]):
-        return "gratidao"
-    else:
-        return "alegria"
+    sentimentos = {
+        "tristeza": ["triste", "desanimado", "deprimido", "pra baixo", "sozinho", "mal"],
+        "ansiedade": ["ansioso", "preocupado", "nervoso", "aflito", "angustiado"],
+        "medo": ["medo", "inseguro", "assustado", "receio"],
+        "gratidao": ["grato", "agradecido", "abençoado"],
+        "cansaco": ["cansado", "exausto", "sem energia", "esgotado"],
+        "alegria": ["feliz", "alegre", "animado", "contente"]
+    }
 
-# 🔥 mapa sentimento → busca
+    pontuacao = {s: 0 for s in sentimentos}
+
+    for sentimento, palavras in sentimentos.items():
+        for palavra in palavras:
+            if palavra in texto:
+                pontuacao[sentimento] += 1
+
+    melhor = max(pontuacao, key=pontuacao.get)
+
+    if pontuacao[melhor] == 0:
+        return None
+
+    return melhor
+
 mapa = {
     "tristeza": "psalms",
     "ansiedade": "peace",
@@ -37,7 +45,6 @@ mapa = {
     "alegria": "joy"
 }
 
-# 🔥 buscar da API
 def buscar_api(sentimento):
     try:
         tema = mapa.get(sentimento, "faith")
@@ -52,15 +59,12 @@ def buscar_api(sentimento):
     except:
         return None
 
-# 🔹 rota botão
 @app.route("/versiculo/<sentimento>")
 def get_versiculo(sentimento):
     sentimento = sentimento.lower()
 
-    # tenta API primeiro
     verso = buscar_api(sentimento)
 
-    # fallback pro JSON
     if not verso:
         if sentimento not in versiculos:
             return jsonify({"erro": "Sentimento não encontrado"}), 404
@@ -69,7 +73,6 @@ def get_versiculo(sentimento):
 
     return jsonify({"versiculo": verso})
 
-# 🔥 rota IA
 @app.route("/analisar", methods=["POST"])
 def analisar():
     dados = request.json
@@ -77,10 +80,13 @@ def analisar():
 
     sentimento = detectar_sentimento(texto)
 
-    # tenta API
+    if not sentimento:
+        return jsonify({
+            "erro": "Não consegui entender como você está se sentindo. Tente algo como: 'estou triste' ou 'estou ansioso'."
+        })
+
     verso = buscar_api(sentimento)
 
-    # fallback JSON
     if not verso:
         verso = random.choice(versiculos[sentimento])
 
