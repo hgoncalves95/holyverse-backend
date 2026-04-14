@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import json
 import random
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -9,7 +10,7 @@ CORS(app)
 with open("versiculos.json", "r", encoding="utf-8") as f:
     versiculos = json.load(f)
 
-# 🔥 IA SIMPLES
+# 🔥 detectar sentimento
 def detectar_sentimento(texto):
     texto = texto.lower()
 
@@ -26,20 +27,46 @@ def detectar_sentimento(texto):
     else:
         return "alegria"
 
-# 🏠 rota raiz (IMPORTANTE)
-@app.route("/")
-def home():
-    return "Backend HolyVerse rodando 🚀"
+# 🔥 mapa sentimento → busca
+mapa = {
+    "tristeza": "psalms",
+    "ansiedade": "peace",
+    "medo": "fear",
+    "gratidao": "praise",
+    "cansaco": "rest",
+    "alegria": "joy"
+}
 
-# 🔹 rota dos botões
+# 🔥 buscar da API
+def buscar_api(sentimento):
+    try:
+        tema = mapa.get(sentimento, "faith")
+        url = f"https://bible-api.com/{tema}"
+
+        res = requests.get(url, timeout=3)
+        data = res.json()
+
+        if "text" in data:
+            return data["text"].strip()
+
+    except:
+        return None
+
+# 🔹 rota botão
 @app.route("/versiculo/<sentimento>")
 def get_versiculo(sentimento):
     sentimento = sentimento.lower()
 
-    if sentimento not in versiculos:
-        return jsonify({"erro": "Sentimento não encontrado"}), 404
+    # tenta API primeiro
+    verso = buscar_api(sentimento)
 
-    verso = random.choice(versiculos[sentimento])
+    # fallback pro JSON
+    if not verso:
+        if sentimento not in versiculos:
+            return jsonify({"erro": "Sentimento não encontrado"}), 404
+
+        verso = random.choice(versiculos[sentimento])
+
     return jsonify({"versiculo": verso})
 
 # 🔥 rota IA
@@ -49,7 +76,13 @@ def analisar():
     texto = dados.get("texto", "")
 
     sentimento = detectar_sentimento(texto)
-    verso = random.choice(versiculos[sentimento])
+
+    # tenta API
+    verso = buscar_api(sentimento)
+
+    # fallback JSON
+    if not verso:
+        verso = random.choice(versiculos[sentimento])
 
     return jsonify({
         "sentimento": sentimento,
