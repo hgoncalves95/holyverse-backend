@@ -10,15 +10,16 @@ CORS(app)
 with open("versiculos.json", "r", encoding="utf-8") as f:
     versiculos = json.load(f)
 
+# 🔥 IA MELHORADA
 def detectar_sentimento(texto):
     texto = texto.lower()
 
     sentimentos = {
-        "tristeza": ["triste", "desanimado", "deprimido", "pra baixo", "sozinho", "mal"],
-        "ansiedade": ["ansioso", "preocupado", "nervoso", "aflito", "angustiado"],
+        "tristeza": ["triste", "desanimado", "deprimido", "pra baixo", "sozinho", "mal", "chorando"],
+        "ansiedade": ["ansioso", "preocupado", "nervoso", "aflito", "angustiado", "ansiedade"],
         "medo": ["medo", "inseguro", "assustado", "receio"],
-        "gratidao": ["grato", "agradecido", "abençoado"],
-        "cansaco": ["cansado", "exausto", "sem energia", "esgotado"],
+        "gratidao": ["grato", "agradecido", "abençoado", "gratidão"],
+        "cansaco": ["cansado", "exausto", "sem energia", "esgotado", "sono"],
         "alegria": ["feliz", "alegre", "animado", "contente"]
     }
 
@@ -31,11 +32,14 @@ def detectar_sentimento(texto):
 
     melhor = max(pontuacao, key=pontuacao.get)
 
+    # 🚨 NÃO FORÇA ALEGRIA
     if pontuacao[melhor] == 0:
         return None
 
     return melhor
 
+
+# 🔥 MAPA API
 mapa = {
     "tristeza": "psalms",
     "ansiedade": "peace",
@@ -45,20 +49,29 @@ mapa = {
     "alegria": "joy"
 }
 
+# 🔥 BUSCA API COM SEGURANÇA
 def buscar_api(sentimento):
     try:
         tema = mapa.get(sentimento, "faith")
         url = f"https://bible-api.com/{tema}"
 
         res = requests.get(url, timeout=3)
+
+        if res.status_code != 200:
+            return None
+
         data = res.json()
 
-        if "text" in data:
+        if "text" in data and data["text"]:
             return data["text"].strip()
 
     except:
         return None
 
+    return None
+
+
+# 🔹 ROTA NORMAL
 @app.route("/versiculo/<sentimento>")
 def get_versiculo(sentimento):
     sentimento = sentimento.lower()
@@ -73,6 +86,8 @@ def get_versiculo(sentimento):
 
     return jsonify({"versiculo": verso})
 
+
+# 🔥 ROTA IA
 @app.route("/analisar", methods=["POST"])
 def analisar():
     dados = request.json
@@ -80,9 +95,10 @@ def analisar():
 
     sentimento = detectar_sentimento(texto)
 
+    # 🚨 NÃO ENTENDEU
     if not sentimento:
         return jsonify({
-            "erro": "Não consegui entender como você está se sentindo. Tente algo como: 'estou triste' ou 'estou ansioso'."
+            "erro": "Não consegui entender 😕\nTente algo como: 'estou triste' ou 'estou ansioso'"
         })
 
     verso = buscar_api(sentimento)
@@ -94,6 +110,13 @@ def analisar():
         "sentimento": sentimento,
         "versiculo": verso
     })
+
+
+# 🔥 ROTA TESTE (IMPORTANTE PRA RENDER)
+@app.route("/")
+def home():
+    return "HolyVerse API está rodando 🙏"
+
 
 if __name__ == "__main__":
     app.run(debug=True)
